@@ -63,6 +63,11 @@ type Config struct {
 	Idp_Token_Url       string `json:"idp_token_url"`
 }
 
+type Tokens struct {
+	AccessToken jwt.TokenPart
+	IdToken     jwt.TokenPart
+}
+
 func main() {
 
 	portPtr := flag.Int("port", 8080, "port for the webserver")
@@ -157,29 +162,8 @@ func main() {
 
 		log.Printf("Response from /token endpoint: \n%s", string(formattedBody))
 
-		//AccessTokenParts Region
-
-		accessTokenParts := strings.Split(HttpBodyResponse.AccessToken, ".")
-		if len(accessTokenParts) != 3 {
-			log.Printf("Access token is not a JWT")
-		}
-
-		headerAttributes, err := decodeAndUnmarshal(accessTokenParts[0])
-		if err != nil {
-			log.Printf("Failed to decode and unmarshal header: %v", err)
-		}
-
-		payloadAttributes, err := decodeAndUnmarshal(accessTokenParts[1])
-		if err != nil {
-			log.Printf("Failed to decode and unmarshal payload: %v", err)
-		}
-
-		//End AccessTokenParts Region
-
-		log.Print("Signature: ", accessTokenParts[2])
-
 		publicKeyReq := getPublicKey(config.Idp_Public_Key_Url)
-		fmt.Println("Getting PublicKey from : ", config.Idp_Public_Key_Url)
+		log.Println("Getting IDP PublicKey from : ", config.Idp_Public_Key_Url)
 
 		publicKeyBody, err := io.ReadAll(publicKeyReq.Body)
 		if err != nil {
@@ -190,28 +174,78 @@ func main() {
 		log.Println("Public Key Body: ", string(publicKeyBody))
 
 		var publikKey PublicKey
-
 		err = json.Unmarshal(publicKeyBody, &publikKey)
 		if err != nil {
 			log.Printf("failed to unmarshal response body: %v", err)
 		}
-		fmt.Println("Public Key: ", publikKey.Keys[0].X5c[0])
 
-		verified := verifySignature(accessTokenParts[0], accessTokenParts[1], publikKey.Keys[0].X5c[0], accessTokenParts[2])
-		fmt.Println("Verified: ", verified)
+		log.Println("Public Key: ", publikKey.Keys[0].X5c[0])
 
-		signatureAttributes := map[string]interface{}{"Signature": verified}
+		//AccessTokenParts Region
 
-		accessTokenPart := jwt.CreateTokenPart(headerAttributes, payloadAttributes, signatureAttributes)
+		accessTokenParts := strings.Split(HttpBodyResponse.AccessToken, ".")
+		if len(accessTokenParts) != 3 {
+			log.Printf("Access token is not a JWT")
+		}
 
-		//IdTokenParts Region
+		accessTokenHeaderAttributes, err := decodeAndUnmarshal(accessTokenParts[0])
+		if err != nil {
+			log.Printf("Failed to decode and unmarshal header: %v", err)
+		}
+
+		accessTokenPayloadAttributes, err := decodeAndUnmarshal(accessTokenParts[1])
+		if err != nil {
+			log.Printf("Failed to decode and unmarshal payload: %v", err)
+		}
+
+		log.Print("Access Token Signature: ", accessTokenParts[2])
+
+		accessTokenVerified := verifySignature(accessTokenParts[0], accessTokenParts[1], publikKey.Keys[0].X5c[0], accessTokenParts[2])
+		log.Println("Access Token Signature Verified: ", accessTokenVerified)
+
+		accessTokenSignatureAttributes := map[string]interface{}{"Signature": accessTokenVerified}
+
+		accessToken := jwt.CreateTokenPart(accessTokenHeaderAttributes, accessTokenPayloadAttributes, accessTokenSignatureAttributes)
+
+		//End AccessTokenParts Region
+
+		//Start IdToken Region
+
+		idTokenParts := strings.Split(HttpBodyResponse.IdToken, ".")
+		if len(idTokenParts) != 3 {
+			log.Print("Id token is not a JWT")
+		}
+
+		idTokenHeaderAttributes, err := decodeAndUnmarshal(idTokenParts[0])
+		if err != nil {
+			log.Printf("Failed to decode and unmarshal header: %v", err)
+		}
+
+		idTokenPayloadAttributes, err := decodeAndUnmarshal(idTokenParts[1])
+		if err != nil {
+			log.Printf("Failed to decode and unmarshal payload: %v", err)
+		}
+
+		log.Print("Id Token Signature: ", accessTokenParts[2])
+
+		idTokenVerified := verifySignature(idTokenParts[0], idTokenParts[1], publikKey.Keys[0].X5c[0], idTokenParts[2])
+
+		idTokenSignatureAttributes := map[string]interface{}{"Signature": idTokenVerified}
+		log.Println("Id Token Signature Verified: ", accessTokenVerified)
+
+		idToken := jwt.CreateTokenPart(idTokenHeaderAttributes, idTokenPayloadAttributes, idTokenSignatureAttributes)
+
+		//End IdToken Region
+
+		Tokens := Tokens{AccessToken: accessToken, IdToken: idToken}
 
 		tmpl, err := template.ParseFiles("html/response_template.html")
 		if err != nil {
 			log.Printf("failed to parse template: %v", err)
 		}
 
-		err = tmpl.Execute(w, accessTokenPart)
+		err = tmpl.Execute(w, Tokens)
+
 		if err != nil {
 			log.Printf("failed to execute template: %v", err)
 			return
@@ -229,7 +263,7 @@ func main() {
 
 	}()
 	server := fmt.Sprintf("localhost:%d", *portPtr)
-	fmt.Printf("Lyssnar på port: %d\n", *portPtr)
+	log.Printf("Lyssnar på port: %d\n", *portPtr)
 	log.Fatal(http.ListenAndServe(server, nil))
 
 }
@@ -257,12 +291,14 @@ func decodeAndUnmarshal(part string) (map[string]interface{}, error) {
 
 	decodedPart, err := base64.URLEncoding.DecodeString(part)
 	if err != nil {
+		log.Printf("failed to decode part: %v", err)
 		return nil, fmt.Errorf("failed to decode part: %v", err)
 	}
 
 	var attributes map[string]interface{}
 	err = json.Unmarshal(decodedPart, &attributes)
 	if err != nil {
+		log.Printf("failed to decode part: %v", err)
 		return nil, fmt.Errorf("failed to unmarshal part: %v", err)
 	}
 
@@ -305,9 +341,9 @@ func verifySignature(base64Header string, base64Payload string, publikKey string
 		}
 	}
 	publikKeyWithBreaks := b.String()
-	fmt.Println("Public Key with Breaks: ", publikKeyWithBreaks)
+	log.Println("Public Key with Breaks: ", publikKeyWithBreaks)
 	formatedPublikKey := "-----BEGIN CERTIFICATE-----\n" + publikKeyWithBreaks + "\n-----END CERTIFICATE-----"
-	fmt.Println("Formated Public Key: ", formatedPublikKey)
+	log.Println("Formated Public Key: ", formatedPublikKey)
 
 	pem, _ := pem.Decode([]byte(formatedPublikKey))
 	if pem == nil {
