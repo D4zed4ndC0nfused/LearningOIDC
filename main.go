@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"flag"
 	"fmt"
 	"html/template"
 	"io"
@@ -73,7 +74,12 @@ type Config struct {
 }
 
 func main() {
-	config := readConfig("config.json")
+
+	portPtr := flag.Int("port", 8080, "port for the webserver")
+	configPtr := flag.String("config", "config.json", "path to config in json format")
+
+	config := readConfig(*configPtr)
+	flag.Parse()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "html/index.html")
@@ -98,11 +104,11 @@ func main() {
 		params.Add("code_challenge", challenge)
 		params.Add("code_challenge_method", config.CodeChallengeMethod)
 
-		fmt.Printf("Redirecting to: %s\n", config.IDPAuthority+params.Encode())
+		log.Printf("Redirecting to: %s\n", config.IDPAuthority+params.Encode())
 
 		http.Redirect(w, r, config.IDPAuthority+params.Encode(), http.StatusFound)
 
-		fmt.Printf("Method: %s\n", r.Method)
+		log.Printf("Method: %s\n", r.Method)
 
 	})
 
@@ -183,7 +189,7 @@ func main() {
 		log.Print("Signature: ", accessTokenParts[2])
 
 		publicKeyReq := getPublicKey(config.Idp_Public_Key_Url)
-		fmt.Println("Public Key: ", publicKeyReq)
+		fmt.Println("Getting PublicKey from : ", config.Idp_Public_Key_Url)
 
 		publicKeyBody, err := io.ReadAll(publicKeyReq.Body)
 		if err != nil {
@@ -210,8 +216,6 @@ func main() {
 
 		//IdTokenParts Region
 
-		log.Print("Read response body, about to write response")
-
 		tmpl, err := template.ParseFiles("html/response_template.html")
 		if err != nil {
 			log.Printf("failed to parse template: %v", err)
@@ -231,14 +235,18 @@ func main() {
 
 	})
 
+	browserURL := fmt.Sprintf("http://localhost:%d", *portPtr)
+
 	go func() {
-		err := exec.Command("brave", "--incognito", "http://localhost:8080").Run()
+		err := exec.Command("brave", "--incognito", browserURL).Run()
 		if err != nil {
 			log.Println("Failed to open browser: ", err)
 		}
 
 	}()
-	log.Fatal(http.ListenAndServe("localhost:8080", nil))
+	server := fmt.Sprintf("localhost:%d", *portPtr)
+	fmt.Printf("Lyssnar på port: %d\n", *portPtr)
+	log.Fatal(http.ListenAndServe(server, nil))
 
 }
 
