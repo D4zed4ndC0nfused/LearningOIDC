@@ -1,0 +1,12 @@
+{
+    "response_type": "code",
+    "client_id": "client_id",
+    "redirect_uri": "http://localhost:8080/callback",
+    "scope": "openid profile email",
+    "code_challenge_method": "S256",
+    "grant_type": "authorization_code",
+
+    "idp_public_key_url": "Url to the public key",
+    "idp_authority": "Url to the authority",
+    "idp_token_url": "Url to the token endpoint"
+}
