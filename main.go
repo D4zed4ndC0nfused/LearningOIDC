@@ -17,6 +17,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"openidClient/jwt"
 	"os"
 	"os/exec"
 	"strings"
@@ -32,17 +33,6 @@ type HttpBodyResponse struct {
 	RefreshTokenExpiresIn int    `json:"refresh_token_expires_in"`
 	Scope                 string `json:"scope"`
 	IdToken               string `json:"id_token"`
-}
-
-type TokenPart struct {
-	Header    JWTPart
-	Payload   JWTPart
-	Signature JWTPart
-}
-
-type JWTPart struct {
-	PartName   string
-	Attributes map[string]interface{}
 }
 
 // Used for veryfying the signature
@@ -212,7 +202,7 @@ func main() {
 
 		signatureAttributes := map[string]interface{}{"Signature": verified}
 
-		accessTokenPart := createTokenPart(headerAttributes, payloadAttributes, signatureAttributes)
+		accessTokenPart := jwt.CreateTokenPart(headerAttributes, payloadAttributes, signatureAttributes)
 
 		//IdTokenParts Region
 
@@ -221,13 +211,7 @@ func main() {
 			log.Printf("failed to parse template: %v", err)
 		}
 
-		data := TokenPart{
-			Header:    accessTokenPart.Header,
-			Payload:   accessTokenPart.Payload,
-			Signature: accessTokenPart.Signature,
-		}
-
-		err = tmpl.Execute(w, data)
+		err = tmpl.Execute(w, accessTokenPart)
 		if err != nil {
 			log.Printf("failed to execute template: %v", err)
 			return
@@ -248,23 +232,6 @@ func main() {
 	fmt.Printf("Lyssnar på port: %d\n", *portPtr)
 	log.Fatal(http.ListenAndServe(server, nil))
 
-}
-
-func createTokenPart(header map[string]interface{}, payload map[string]interface{}, signature map[string]interface{}) TokenPart {
-	return TokenPart{
-		Header: JWTPart{
-			PartName:   "Header",
-			Attributes: header,
-		},
-		Payload: JWTPart{
-			PartName:   "Payload",
-			Attributes: payload,
-		},
-		Signature: JWTPart{
-			PartName:   "Signature",
-			Attributes: signature,
-		},
-	}
 }
 
 func generateCodeVerifier() (string, error) {
