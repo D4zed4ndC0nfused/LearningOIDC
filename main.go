@@ -68,6 +68,13 @@ type Tokens struct {
 	IdToken     jwt.TokenPart
 }
 
+type TemplateData struct {
+	Tokens      Tokens
+	RedirectURI string
+}
+
+var RedirectURI string
+
 func main() {
 
 	portPtr := flag.Int("port", 8080, "port for the webserver")
@@ -100,6 +107,8 @@ func main() {
 		params.Add("code_challenge_method", config.CodeChallengeMethod)
 
 		log.Printf("Redirecting to: %s\n", config.IDPAuthority+params.Encode())
+
+		RedirectURI = config.IDPAuthority + params.Encode()
 
 		http.Redirect(w, r, config.IDPAuthority+params.Encode(), http.StatusFound)
 
@@ -237,14 +246,17 @@ func main() {
 
 		//End IdToken Region
 
-		Tokens := Tokens{AccessToken: accessToken, IdToken: idToken}
+		data := TemplateData{
+			Tokens:      Tokens{AccessToken: accessToken, IdToken: idToken},
+			RedirectURI: RedirectURI,
+		}
 
 		tmpl, err := template.ParseFiles("html/response_template.html")
 		if err != nil {
 			log.Printf("failed to parse template: %v", err)
 		}
 
-		err = tmpl.Execute(w, Tokens)
+		err = tmpl.Execute(w, data)
 
 		if err != nil {
 			log.Printf("failed to execute template: %v", err)
