@@ -37,110 +37,94 @@
         .part {
             font-size: 50px;
         }
+
+        .spacer {
+            margin-top: 5%;
+            margin-bottom: 5%;
+        }
     </style>
 </head>
 
 <body class="vh-100">
     <div class="container-fluid text-center bg-dark">
         <div class="row">
+            <!---
+                Left side
+            -->
             <div class="col-6">
-            </div>
-            <div class="col-6 align-items-center justify-content-center" style="font-size: medium;">
-                <h1 class="part">AccessToken</h1>
-            </div>
-        </div>
-        <div class=row>
-            <div class="col-6 align-items-center justify-content-center">
-                <form action="/login" method="post">
+                <form action="/login" method="post" class="spacer">
                     <button type="submit" class="btn btn-primary">Logga in på nytt</button>
                 </form>
-            </div>
-            <div class="col-6">
-                <div>
-                    <h1 style="margin-top: 2%;">{{.Tokens.AccessToken.Header.PartName}}</h1>
-                    <div class="table-responsive">
-                        <table class="table table-dark table-striped table-hover table-bordered auto-width mx-auto">
-                            <thead class=" table-dark">
-                                <tr>
-                                    <th scope="col">Attribut</th>
-                                    <th scope="col">Value</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {{range $key, $value := .Tokens.AccessToken.Header.Attributes}}
-                                <tr>
-                                    <td>{{$key}}</td>
-                                    <td>{{$value}} </td>
-                                </tr>
-                                {{end}}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="row no-gutters">
-            <div class="col-6">
-                <h1>RedirectURI</h1>
+                <h1>Authorization URL</h1>
                 <p class="text-break text-start" style="color: white; font-size: 12px; ">{{.RedirectURI}}</p>
+                <h1>Response from IDP</h1>
+
+                <pre class="text-break text-start" id="json"
+                    style="color: white; font-size: 12px; white-space: pre-wrap; word-break: break-all;"></pre>
+                <script>
+                    var json = JSON.parse('{{.ResponseBodyTokenEndpoint}}');
+                    var formattedJson = JSON.stringify(json, null, 2);
+                    document.getElementById('json').textContent = formattedJson;
+                </script>
             </div>
-            <div class="col-6">
-                <div>
-                    <h1>{{.Tokens.AccessToken.Payload.PartName}}</h1>
+            <!---
+                Right side 
+            -->
+            <div class="col-6 align-items-center justify-content-center" style="font-size: medium;">
+                <h1 class="part">AccessToken</h1>
+
+                <h1 style="margin-top: 2%;">{{.Tokens.AccessToken.Header.PartName}}</h1>
+                <div class="table-responsive">
+                    <table class="table table-dark table-striped table-hover table-bordered auto-width mx-auto">
+                        <thead class=" table-dark">
+                            <tr>
+                                <th scope="col">Attribut</th>
+                                <th scope="col">Value</th>
+                            </tr>Authorization
+                        </thead>
+                        <tbody>
+                            {{range $key, $value := .Tokens.AccessToken.Header.Attributes}}
+                            <tr>
+                                <td>{{$key}}</td>
+                                <td>{{$value}} </td>
+                            </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
                     <div>
-                        <table class="table table-dark table-striped table-hover table-bordered auto-width mx-auto">
-                            <thead class=" table-dark">
-                                <tr>
-                                    <th scope="col">Attribut</th>
-                                    <th scope="col">Value</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {{range $key, $value := .Tokens.AccessToken.Payload.Attributes}}
-                                <tr>
-                                    <td scope="row">{{$key}}</td>
-                                    <td scope="row">{{$value}} </td>
-                                </tr>
-                                {{end}}
-                            </tbody>
-                        </table>
+                        <h1>{{.Tokens.AccessToken.Payload.PartName}}</h1>
+                        <div>
+                            <table class="table table-dark table-striped table-hover table-bordered auto-width mx-auto">
+                                <thead class=" table-dark">
+                                    <tr>
+                                        <th scope="col">Attribut</th>
+                                        <th scope="col">Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{range $key, $value := .Tokens.AccessToken.Payload.Attributes}}
+                                    <tr>
+                                        <td scope="row">{{$key}}</td>
+                                        <td scope="row">{{$value}} </td>
+                                    </tr>
+                                    {{end}}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
-            </div>
-        </div>
-        <div class="row no-gutters">
-            <div class="col-6">
-
-            </div>
-
-            <div class="col-6">
-                <div>
-                    <h1>{{.Tokens.AccessToken.Signature.PartName}}</h1>
-                    {{if eq (index .Tokens.AccessToken.Signature.Attributes "Signature") true}}
-                    <div class="alert alert-success" role="alert" style="display: inline-block;">
-                        Signature is valid
+                    <div>
+                        <h1>{{.Tokens.AccessToken.Signature.PartName}}</h1>
+                        {{if eq (index .Tokens.AccessToken.Signature.Attributes "Signature") true}}
+                        <div class="alert alert-success" role="alert" style="display: inline-block;">
+                            Signature is valid
+                        </div>
+                        {{else}}
+                        <div class="alert alert-danger" role="alert" style="display: inline-block;">
+                            Signature is not valid! Care!
+                        </div>
+                        {{end}}
                     </div>
-                    {{else}}
-                    <div class="alert alert-danger" role="alert" style="display: inline-block;">
-                        Signature is not valid! Care!
-                    </div>
-                    {{end}}
-                </div>
-            </div>
-            <div class="col-6">
-
-            </div>
-            <div class="row no-gutters">
-                <div class="col-6">
-                </div>
-                <div class="col-6 align-items-center justify-content-center" style="font-size: medium;">
                     <h1 class="part">IdToken</h1>
-                </div>
-            </div>
-            <div class=row>
-                <div class="col-6 align-items-center justify-content-center">
-                </div>
-                <div class="col-6">
                     <div>
                         <h1 style="margin-top: 2%;">{{.Tokens.IdToken.Header.PartName}}</h1>
                         <div class="table-responsive">
@@ -162,13 +146,6 @@
                             </table>
                         </div>
                     </div>
-                </div>
-            </div>
-            <div class="row no-gutters">
-                <div class="col-6">
-
-                </div>
-                <div class="col-6">
                     <div>
                         <h1>{{.Tokens.IdToken.Payload.PartName}}</h1>
                         <div>
@@ -190,14 +167,6 @@
                             </table>
                         </div>
                     </div>
-                </div>
-            </div>
-            <div class="row no-gutters">
-                <div class="col-6">
-
-                </div>
-
-                <div class="col-6">
                     <div>
                         <h1>{{.Tokens.AccessToken.Signature.PartName}}</h1>
                         {{if eq (index .Tokens.AccessToken.Signature.Attributes "Signature") true}}
@@ -211,10 +180,13 @@
                         {{end}}
                     </div>
                 </div>
-                <div class="col-6">
-
-                </div>
             </div>
+
+
+        </div>
+        <!--
+            End
+        -->
 </body>
 
 </html>
