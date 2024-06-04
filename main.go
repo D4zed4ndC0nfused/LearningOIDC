@@ -69,8 +69,9 @@ type Tokens struct {
 }
 
 type TemplateData struct {
-	Tokens      Tokens
-	RedirectURI string
+	Tokens                    Tokens
+	RedirectURI               string
+	ResponseBodyTokenEndpoint string `json:"response_body_token_endpoint"`
 }
 
 var RedirectURI string
@@ -247,8 +248,9 @@ func main() {
 		//End IdToken Region
 
 		data := TemplateData{
-			Tokens:      Tokens{AccessToken: accessToken, IdToken: idToken},
-			RedirectURI: RedirectURI,
+			Tokens:                    Tokens{AccessToken: accessToken, IdToken: idToken},
+			RedirectURI:               RedirectURI,
+			ResponseBodyTokenEndpoint: string(formattedBody),
 		}
 
 		tmpl, err := template.ParseFiles("html/response_template.html")
