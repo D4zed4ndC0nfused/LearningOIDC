@@ -79,10 +79,18 @@ var RedirectURI string
 func main() {
 
 	portPtr := flag.Int("port", 8080, "port for the webserver")
-	configPtr := flag.String("config", "config.json", "path to config in json format")
-
-	config := readConfig(*configPtr)
+	configPtr := flag.String("config", "", "path to config in json format (default \"./config.json\")")
+	hostnamePtr := flag.String("hostname", "localhost", "hostname for the server")
 	flag.Parse()
+
+	var config Config
+
+	if *configPtr != "" {
+		config = readConfig(*configPtr)
+	} else {
+		fmt.Println("No config file provided, using default values ./config.json")
+		config = readConfig("./config.json")
+	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "html/index.html")
@@ -267,7 +275,7 @@ func main() {
 
 	})
 
-	browserURL := fmt.Sprintf("http://localhost:%d", *portPtr)
+	browserURL := fmt.Sprintf("http://%v:%d", *hostnamePtr, *portPtr)
 
 	go func() {
 		err := exec.Command("brave", "--incognito", browserURL).Run()
@@ -276,7 +284,7 @@ func main() {
 		}
 
 	}()
-	server := fmt.Sprintf("localhost:%d", *portPtr)
+	server := fmt.Sprintf("%v:%d", *hostnamePtr, *portPtr)
 	log.Printf("Lyssnar på port: %d\n", *portPtr)
 	log.Fatal(http.ListenAndServe(server, nil))
 
