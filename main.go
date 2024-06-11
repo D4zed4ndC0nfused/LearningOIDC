@@ -326,10 +326,13 @@ func decodeAndUnmarshal(part string) (map[string]interface{}, error) {
 
 	for key, value := range attributes {
 		switch key {
-		case "iat", "nbf", "exp":
-			timestamp := value.(float64)
-			date := time.Unix(int64(timestamp), 0)
-			attributes[key] = date
+		case "iat", "nbf", "exp", "auth_time":
+			if timestamp, ok := value.(float64); ok {
+				date := time.Unix(int64(timestamp), 0)
+				attributes[key] = date
+			} else {
+				log.Println("Failed to convert timestamp")
+			}
 		}
 	}
 
